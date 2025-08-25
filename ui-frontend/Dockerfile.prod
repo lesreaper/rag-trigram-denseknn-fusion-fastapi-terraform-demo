@@ -1,0 +1,23 @@
+# ---------- build stage ----------
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm build
+
+# ---------- runtime stage ----------
+FROM node:20-alpine
+WORKDIR /app
+
+# Install corepack and enable pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY --from=builder /app /app
+ENV PORT=3000
+EXPOSE 3000
+
+# Use local binary path to avoid relying on global install
+CMD ["node_modules/.bin/next", "start"]

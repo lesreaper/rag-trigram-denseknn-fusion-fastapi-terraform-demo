@@ -1,0 +1,54 @@
+services:
+  # --- Postgres + pgvector ---
+  db:
+    image: ankane/pgvector
+    container_name: local-pgvector
+    ports: ["5432:5432"]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: localpass
+      POSTGRES_DB: postgres
+    volumes:
+      - ./db_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    restart: always
+
+  # --- FastAPI RAG API ---
+  api:
+    build:
+      context: ./api
+    ports: ["8000:8000"]
+    env_file:
+      - .aws.env 
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: localpass
+      POSTGRES_DB: postgres
+      AWS_REGION: 
+      RAW_BUCKET: 
+      CLEAN_BUCKET: 
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      SENTRY_API_DSN: ${SENTRY_API_DSN-}
+      USE_AGENT: "true"
+      ANSWER_MODEL: "gpt-4o-mini"
+      MAX_CONTEXT_CHARS: "25000"
+      ANSWER_TEMPERATURE: "0.2"
+      EMBED_MODEL: "text-embedding-3-small"
+    volumes:
+      - ./db_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+      
+
+  ui:
+    build:
+      context: ./ui-frontend
+      dockerfile: Dockerfile.prod
+    ports: ["3000:3000"]
+    environment:
+      NEXT_PUBLIC_API_URL: http://api:8000/api
+      SENTRY_DSN: ${SENTRY_UI_DSN-}   # UI looks for SENTRY_DSN
+      USERNAME: admin
+      PASSWORD: admin123      # optional, for login
+      FASTAPI_INTERNAL_URL: http://api:8000
