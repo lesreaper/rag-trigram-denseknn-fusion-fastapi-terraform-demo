@@ -18,3 +18,5 @@
 /infra/terraform.tfvars
 /infra/terraform.tfstate
 /infra/terraform.tfstate.backup
+.DS_Store
+.vscode/*
